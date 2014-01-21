@@ -1,15 +1,15 @@
 {
-  "name": "Building Blocks",
-  "description": "Building Blocks Demo App",
+  "name": "Proximity BLE",
+  "description": "Proximity BLE Demo App",
   "launch_path": "/app.html",
   "icons": {
     "128": "/images/app_icon_128.png",
     "60": "/images/app_icon_60.png"
   },
-  "version": "1.1",
+  "version": "0.1",
   "developer": {
-    "name": "Arnau March",
-    "url": "http://buildingfirefoxos.com"
+    "name": "me",
+    "url": "http://test"
   },
   "default_locale": "en"
 }

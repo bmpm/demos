@@ -200,6 +200,10 @@ section[role="region"] > header:first-child .icon.icon-down {
   background-image: url(headers/images/icons/down.png);
 }
 
+section[role="region"] > header:first-child .icon.icon-search {
+  background-image: url(headers/images/icons/search2x.png);
+}
+
 section[role="region"] > header:first-child .icon.icon-disabled {
   opacity: 0.5;
 }
