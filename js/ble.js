@@ -29,6 +29,22 @@ function propertiesChanged(iface, changed, invalidated) {
   }
 }
 
+function interfacesAdded(path, interfaces) {
+  console.log("Interface added: " + path);
+
+  var properties = interfaces["org.bluez.Device1"]
+
+  if (properties == null)
+    return;
+
+  console.log("[ " + properties["Address"] + " ]");
+}
+
+function interfacesRemoved(path, interfaces) {
+  console.log("Interface removed: " + path);
+}
+
+
 function setEnabledItem(id, value) {
   var item = document.getElementById(id);
 
@@ -49,6 +65,12 @@ function errorCB(error) {
   cloudeebus.log("error: " + error + "\n");
 }
 
+function connectInterface(proxy) {
+  console.log("connect Interface ADD/REM");
+  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesAdded", interfacesAdded, errorCB);
+  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesRemoved", interfacesRemoved, errorCB);
+}
+
 function connectSuccess() {
   bus = cloudeebus.SystemBus();
 
@@ -60,6 +82,7 @@ function connect() {
 }
 
 function getManagedObjects(proxy) {
+  connectInterface(proxy);
   proxy.GetManagedObjects().then(getDevices, errorCB);
 }
 
@@ -214,7 +237,7 @@ function getDevices(objs) {
 
   for (o in objs) {
 
-    if (objs[o]["org.bluez.Adapter1"] != null) {
+    if (adapterPath ==null && objs[o]["org.bluez.Adapter1"] != null) {
       console.log("Adapter: " + o);
       adapterPath = o;
     }
