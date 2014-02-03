@@ -10,6 +10,8 @@ document.querySelector('#btn-disc-back').addEventListener ('click', function () 
 });
 
 document.querySelector('#dev-search').addEventListener ('click', function () {
+  clearAllList("dev-disc-list");
+
   document.querySelector('#dev-discovery').className = 'current';
   document.querySelector('[data-position="current"]').className = 'left';
   deviceScanOn();

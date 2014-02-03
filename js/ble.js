@@ -42,8 +42,13 @@ function interfacesAdded(path, interfaces) {
 
 function interfacesRemoved(path, interfaces) {
   console.log("Interface removed: " + path);
-}
+  
+  var item = document.getElementById(path);
+  if (item == null)
+    return;
 
+  // remove from list
+}
 
 function setEnabledItem(id, value) {
   var item = document.getElementById(id);
@@ -53,8 +58,16 @@ function setEnabledItem(id, value) {
   item.setAttribute("aria-disabled", value);
 }
 
-function clearDevList() {
-  listView = document.getElementById("dev-list");
+function delItemList(item, list) {
+  var node = document.getElementById(item);
+  var listView = document.getElementById(list);
+
+  //node.removeEventListener("click", function(e), false);
+  listView.removeChild(node);
+}
+
+function clearAllList(list) {
+  listView = document.getElementById(list);
 
   while (listView.hasChildNodes()) {
       listView.removeChild(listView.lastChild);
@@ -223,17 +236,51 @@ function deviceScanOn() {
   bus.getObject("org.bluez", adapterPath, startScan, errorCB);
 }
 
-function getDevices(objs) {
-  // Create device list
-  clearDevList();
+function addHeaderList(header, list, ulId) {
+  var memoListContainer = document.getElementById(list);
+  var item = document.createElement("header");
 
-  var memoListContainer = document.getElementById("dev-list");
-
-  var header = document.createElement("header");
-  header.appendChild(document.createTextNode("Available Devices"));
-  memoListContainer.appendChild(header);
+  item.appendChild(document.createTextNode(header));
+  memoListContainer.appendChild(item);
 
   var memoList = document.createElement("ul");
+  memoList.id = ulId;
+  memoListContainer.appendChild(memoList);
+
+  return memoList;
+}
+
+function addItemList(properties, list, path) {
+  var memoList = document.getElementById(list);
+  var memoItem = document.createElement("li");
+
+  memoItem.setAttribute("data-name", properties["Alias"]);
+  memoItem.id = path;
+  //if (objs[o]["org.bluez.Device1"]["Connected"] == 0)
+  //  memoItem.setAttribute("aria-disabled", "true");
+  
+  memoItem.addEventListener("click", function (e) {
+            console.log("clicked device: " + this.getAttribute("data-name"));
+
+            document.getElementById("dev-name").innerHTML = this.getAttribute("data-name");
+	    callProximity(objs, this.id);
+  });
+
+        var memoA = document.createElement("a");
+        var memoP = document.createElement("p");
+        var memoTitle = document.createTextNode(properties["Alias"]);
+
+        memoP.appendChild(memoTitle);
+	memoA.appendChild(memoP);
+        memoItem.appendChild(memoA);
+        memoList.appendChild(memoItem);
+}
+
+function getDevices(objs) {
+  // Create device list
+  clearAllList("dev-list");
+
+  var memoList = addHeaderList("Available Devices (Paired)", "dev-list", "dev-list-ul");
 
   for (o in objs) {
 
@@ -245,10 +292,12 @@ function getDevices(objs) {
     if (objs[o]["org.bluez.Device1"] == null)
       continue;
 
+       // Ignore temporary devices
+       if (objs[o]["org.bluez.Device1"]["Paired"] == 0)
+         continue;
+
        cloudeebus.log("Device paired:" + objs[o]["org.bluez.Device1"]["Alias"]);
        bus.getObject("org.bluez", o, connectSignal, errorCB);
- 
-        memoListContainer.appendChild(memoList);
 
         var memoItem = document.createElement("li");
 	memoItem.setAttribute("data-name", objs[o]["org.bluez.Device1"]["Alias"]);
