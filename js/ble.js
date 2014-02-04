@@ -32,12 +32,16 @@ function propertiesChanged(iface, changed, invalidated) {
 function interfacesAdded(path, interfaces) {
   console.log("Interface added: " + path);
 
-  var properties = interfaces["org.bluez.Device1"]
+  if (interfaces == null)
+    return;
+
+  var properties = interfaces["org.bluez.Device1"];
 
   if (properties == null)
     return;
 
   console.log("[ " + properties["Address"] + " ]");
+  addItemList(properties, "dev-disc-list", path)
 }
 
 function interfacesRemoved(path, interfaces) {
@@ -78,10 +82,18 @@ function errorCB(error) {
   cloudeebus.log("error: " + error + "\n");
 }
 
+function errorICB(error) {
+  console.log("ICB error: " + error + "\n");
+}
+
+function errorPCCB(error) {
+  console.log("PC error: " + error + "\n");
+}
+
 function connectInterface(proxy) {
   console.log("connect Interface ADD/REM");
-  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesAdded", interfacesAdded, errorCB);
-  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesRemoved", interfacesRemoved, errorCB);
+  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesAdded", interfacesAdded, errorICB);
+  proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesRemoved", interfacesRemoved, errorICB);
 }
 
 function connectSuccess() {
@@ -215,7 +227,7 @@ function llsAlert(value) {
 }
 
 function connectSignal(proxy) {
-      proxy.connectToSignal("org.freedesktop.DBus.Properties", "PropertiesChanged", propertiesChanged, errorCB);
+      proxy.connectToSignal("org.freedesktop.DBus.Properties", "PropertiesChanged", propertiesChanged, errorPCCB);
 }
 
 function stopScan(proxy) {
@@ -250,30 +262,60 @@ function addHeaderList(header, list, ulId) {
   return memoList;
 }
 
+function delDev(path) {
+  delItemList("discovery" + path, "dev-disc-list");
+}
+
+function errorPairCB(error, msg) {
+  console.log(msg + " error: " + error);
+  //FIXME: show dialog for Pairing failed
+}
+
+function successPairCB(path, msg) {
+  console.log(msg + " successful");
+  delDev(path);
+  //FIXME: show dialog for Pairing successful
+  //FIXME: add new item on device paired list
+}
+
+function callPairDevice(path, alias, paired) {
+  console.log("Pair device: " + path + ", paired: " + paired);
+
+  var obj = bus.getObject("org.bluez", path, null, errorCB);
+
+  if (paired == 0) {
+    console.log("Attempting to pair with " + alias);
+    obj.callMethod("org.bluez.Device1", "Pair", []).then(function () { successPairCB(path, "Pairing"); },
+       function () { errorPairCB(error, "Pairing"); });
+  }
+  else {
+    console.log("Already paired, attempting to connect with" + alias);
+    obj.callMethod("org.bluez.Device1", "Connect", []).then(function () { successPairCB(path, "Connection"); },
+      function () { errorPairCB(error, "Connection"); });
+  }
+}
+
 function addItemList(properties, list, path) {
   var memoList = document.getElementById(list);
   var memoItem = document.createElement("li");
 
   memoItem.setAttribute("data-name", properties["Alias"]);
-  memoItem.id = path;
-  //if (objs[o]["org.bluez.Device1"]["Connected"] == 0)
-  //  memoItem.setAttribute("aria-disabled", "true");
+  memoItem.id = "discovery" + path;
   
   memoItem.addEventListener("click", function (e) {
-            console.log("clicked device: " + this.getAttribute("data-name"));
+    console.log("Pair to device (clicked): " + this.getAttribute("data-name"));
 
-            document.getElementById("dev-name").innerHTML = this.getAttribute("data-name");
-	    callProximity(objs, this.id);
+    callPairDevice(path, properties["Alias"], properties["Paired"]);
   });
 
-        var memoA = document.createElement("a");
-        var memoP = document.createElement("p");
-        var memoTitle = document.createTextNode(properties["Alias"]);
+  var memoA = document.createElement("a");
+  var memoP = document.createElement("p");
+  var memoTitle = document.createTextNode(properties["Alias"]);
 
-        memoP.appendChild(memoTitle);
-	memoA.appendChild(memoP);
-        memoItem.appendChild(memoA);
-        memoList.appendChild(memoItem);
+  memoP.appendChild(memoTitle);
+  memoA.appendChild(memoP);
+  memoItem.appendChild(memoA);
+  memoList.appendChild(memoItem);
 }
 
 function getDevices(objs) {

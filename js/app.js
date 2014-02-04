@@ -9,8 +9,20 @@ document.querySelector('#btn-disc-back').addEventListener ('click', function () 
   deviceScanOff();  
 });
 
+document.querySelector('#btn-stop-disc').addEventListener ('click', function () {
+  if (this.innerHTML === "STOP") {
+    deviceScanOff();
+    this.innerHTML = "START";
+  } else {
+    deviceScanOn();
+    this.innerHTML = "STOP";
+  }
+});
+
 document.querySelector('#dev-search').addEventListener ('click', function () {
   clearAllList("dev-disc-list");
+  addHeaderList("Devices Found", "dev-disc-list", "dev-disc-list-ul");
+  document.querySelector('#btn-stop-disc').innerHTML = "STOP";
 
   document.querySelector('#dev-discovery').className = 'current';
   document.querySelector('[data-position="current"]').className = 'left';
