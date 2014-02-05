@@ -8,6 +8,14 @@ cloudeebus.log = function(msg) {
   console.log("XXX: " + msg);
 };
 
+function customConfirm(title, msg, type) {
+  document.getElementById("conf-title").innerHTML = title;
+  document.getElementById("conf-name-disc").innerHTML = msg;
+  document.getElementById("conf-button").className = type;
+
+  document.querySelector('#confirm').className = 'fade-in';
+}
+
 function propertiesChanged(iface, changed, invalidated) {
   if (iface != "org.bluez.Device1")
     return;
@@ -19,9 +27,8 @@ function propertiesChanged(iface, changed, invalidated) {
   cloudeebus.log("Connected == " + changed["Connected"] + "name: " + this.Alias);
 
   if (changed["Connected"] == 0) {
-     document.getElementById("name-disc").innerHTML = "Device " + this.Alias + " disconnected";
+     customConfirm("WARNING", "Device " + this.Alias + " disconnected", "danger");
      document.getElementById("dev-name").innerHTML = this.Alias + "(disconnected)";
-     document.querySelector('#confirm').className = 'fade-in';
      setEnabledItem(this.objectPath, "true");
   } else {
      document.getElementById("dev-name").innerHTML = this.Alias;
@@ -47,11 +54,11 @@ function interfacesAdded(path, interfaces) {
 function interfacesRemoved(path, interfaces) {
   console.log("Interface removed: " + path);
   
-  var item = document.getElementById(path);
-  if (item == null)
-    return;
-
-  // remove from list
+  if (document.querySelector('#dev-discovery').className == 'current') {
+      delItemList("discovery" + path);
+  } else {
+      delItemList(path);
+  }
 }
 
 function setEnabledItem(id, value) {
@@ -62,12 +69,13 @@ function setEnabledItem(id, value) {
   item.setAttribute("aria-disabled", value);
 }
 
-function delItemList(item, list) {
+function delItemList(item) {
   var node = document.getElementById(item);
-  var listView = document.getElementById(list);
 
-  //node.removeEventListener("click", function(e), false);
-  listView.removeChild(node);
+  if (node == null)
+    return;
+
+  node.parentNode.removeChild(node);
 }
 
 function clearAllList(list) {
@@ -236,6 +244,7 @@ function stopScan(proxy) {
 
 function deviceScanOff() {
   console.log("Stop scanning ...");
+  document.getElementById("spin-dev-disc").style.visibility = "hidden";
   bus.getObject("org.bluez", adapterPath, stopScan, errorCB);
 }
 
@@ -245,14 +254,22 @@ function startScan(proxy) {
 
 function deviceScanOn() {
   console.log("Start scanning ...");
+  document.getElementById("spin-dev-disc").style.visibility = "visible";
   bus.getObject("org.bluez", adapterPath, startScan, errorCB);
 }
 
-function addHeaderList(header, list, ulId) {
+function addHeaderList(header, spin, list, ulId) {
   var memoListContainer = document.getElementById(list);
   var item = document.createElement("header");
 
   item.appendChild(document.createTextNode(header));
+  if (spin != null) {
+    var spinItem = document.createElement("progress");
+    spinItem.id = spin;
+    spinItem.style.marginLeft = "15px";
+    spinItem.style.marginBottom = "10px";
+    item.appendChild(spinItem);
+  }
   memoListContainer.appendChild(item);
 
   var memoList = document.createElement("ul");
@@ -262,20 +279,21 @@ function addHeaderList(header, list, ulId) {
   return memoList;
 }
 
-function delDev(path) {
-  delItemList("discovery" + path, "dev-disc-list");
-}
-
 function errorPairCB(error, msg) {
   console.log(msg + " error: " + error);
-  //FIXME: show dialog for Pairing failed
+  customConfirm("WARNING", msg, "danger");
+}
+
+function rebuildDevList() {
+  bus.getObject("org.bluez", "/",
+    function (proxy) { proxy.GetManagedObjects().then(getDevices, errorCB); },
+    function (error) { console.log("Device list: " + error); });
 }
 
 function successPairCB(path, msg) {
-  console.log(msg + " successful");
-  delDev(path);
-  //FIXME: show dialog for Pairing successful
-  //FIXME: add new item on device paired list
+  console.log(msg);
+  delItemList("discovery" + path);
+  customConfirm("Result", msg, "");
 }
 
 function callPairDevice(path, alias, paired) {
@@ -285,13 +303,13 @@ function callPairDevice(path, alias, paired) {
 
   if (paired == 0) {
     console.log("Attempting to pair with " + alias);
-    obj.callMethod("org.bluez.Device1", "Pair", []).then(function () { successPairCB(path, "Pairing"); },
-       function () { errorPairCB(error, "Pairing"); });
+    obj.callMethod("org.bluez.Device1", "Pair", []).then(function () { successPairCB(path, "Device " + alias + " : " + "Pairing successful"); },
+       function (error) { errorPairCB(error, "Failed to pair: " + alias); });
   }
   else {
-    console.log("Already paired, attempting to connect with" + alias);
-    obj.callMethod("org.bluez.Device1", "Connect", []).then(function () { successPairCB(path, "Connection"); },
-      function () { errorPairCB(error, "Connection"); });
+    console.log("Already paired, attempting to connect with " + alias);
+    obj.callMethod("org.bluez.Device1", "Connect", []).then(function () { successPairCB(path, "Device " + alias + " : " + "Connection successful"); },
+      function (error) { errorPairCB(error, "Failed to connect: " + alias); });
   }
 }
 
@@ -305,7 +323,7 @@ function addItemList(properties, list, path) {
   memoItem.addEventListener("click", function (e) {
     console.log("Pair to device (clicked): " + this.getAttribute("data-name"));
 
-    callPairDevice(path, properties["Alias"], properties["Paired"]);
+    callPairDevice(path, this.getAttribute("data-name"), properties["Paired"]);
   });
 
   var memoA = document.createElement("a");
@@ -318,11 +336,37 @@ function addItemList(properties, list, path) {
   memoList.appendChild(memoItem);
 }
 
+function getTMPDevices(objs) {
+  for (o in objs) {
+    if (objs[o]["org.bluez.Device1"] == null)
+      continue;
+
+    console.log(o + objs[o]["org.bluez.Device1"]);
+    // Get temporary devices and not connect devices (already paired)
+    if (objs[o]["org.bluez.Device1"]["Connected"] == 1)
+      continue;
+
+    console.log("Device discovery:" + objs[o]["org.bluez.Device1"]["Alias"]);
+    addItemList(objs[o]["org.bluez.Device1"], "dev-disc-list", o);
+  }
+}
+
+function createDiscList() {
+  // Create device discovery list
+  clearAllList("dev-disc-list");
+  addHeaderList("Devices Found", "spin-dev-disc", "dev-disc-list", "dev-disc-list-ul");
+  document.querySelector('#btn-stop-disc').innerHTML = "STOP";
+
+  bus.getObject("org.bluez", "/",
+    function (proxy) { proxy.GetManagedObjects().then(getTMPDevices, errorCB); },
+    function (error) { console.log("Device discovery list: " + error); });
+}
+
 function getDevices(objs) {
   // Create device list
   clearAllList("dev-list");
 
-  var memoList = addHeaderList("Available Devices (Paired)", "dev-list", "dev-list-ul");
+  var memoList = addHeaderList("Available Devices (Paired)", null, "dev-list", "dev-list-ul");
 
   for (o in objs) {
 

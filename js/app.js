@@ -6,11 +6,13 @@ document.querySelector('#btn-prox-back').addEventListener ('click', function () 
 document.querySelector('#btn-disc-back').addEventListener ('click', function () {
   document.querySelector('#dev-discovery').className = 'right';
   document.querySelector('[data-position="current"]').className = 'current';
-  deviceScanOff();  
+  if (document.querySelector('#btn-stop-disc').innerHTML != "START")
+    deviceScanOff();
+  rebuildDevList(); 
 });
 
 document.querySelector('#btn-stop-disc').addEventListener ('click', function () {
-  if (this.innerHTML === "STOP") {
+  if (this.innerHTML == "STOP") {
     deviceScanOff();
     this.innerHTML = "START";
   } else {
@@ -20,9 +22,7 @@ document.querySelector('#btn-stop-disc').addEventListener ('click', function () 
 });
 
 document.querySelector('#dev-search').addEventListener ('click', function () {
-  clearAllList("dev-disc-list");
-  addHeaderList("Devices Found", "dev-disc-list", "dev-disc-list-ul");
-  document.querySelector('#btn-stop-disc').innerHTML = "STOP";
+  createDiscList();
 
   document.querySelector('#dev-discovery').className = 'current';
   document.querySelector('[data-position="current"]').className = 'left';
