@@ -133,7 +133,8 @@
     <section id="drawer" role="region">
       <header class="fixed">
         <menu type="toolbar">
-          <a id="dev-search" href="#"><span class="icon icon-search">search</span></a>
+          <a id="dev-search" href="#"><span class="icon action-icon search">search</span></a>
+          <a id="dev-rem" href="#"><span class="icon action-icon delete">delete</span></a>
         </menu>
         <h1>Proximity BLE <em>demo</em></h1>
       </header>
@@ -228,6 +229,17 @@
     </article>
   </section>
 
+  <!--························ Remove Device ···························-->
+  <section role="region" id="remove-device" data-position="right">
+    <header class="fixed">
+      <a id="btn-rem-back" href="#"><span class="icon icon-back">back</span></a>
+      <h1>Remove Device</h1>
+    </header>
+    <article class="content scrollable header">
+      <div data-type="list" id="rem-dev-list">
+
+    </article>
+  </section>
   <script type="text/javascript" src="js/app.js"></script>
 </body>
 </html>

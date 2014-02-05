@@ -21,12 +21,23 @@ document.querySelector('#btn-stop-disc').addEventListener ('click', function () 
   }
 });
 
+document.querySelector('#btn-rem-back').addEventListener ('click', function () {
+  document.querySelector('#remove-device').className = 'right';
+  document.querySelector('[data-position="current"]').className = 'current';
+});
+
 document.querySelector('#dev-search').addEventListener ('click', function () {
   createDiscList();
 
   document.querySelector('#dev-discovery').className = 'current';
   document.querySelector('[data-position="current"]').className = 'left';
   deviceScanOn();
+});
+
+document.querySelector('#dev-rem').addEventListener ('click', function () {
+  createRemList();
+  document.querySelector('#remove-device').className = 'current';
+  document.querySelector('[data-position="current"]').className = 'left';
 });
 
 //confirm

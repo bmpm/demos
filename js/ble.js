@@ -351,6 +351,41 @@ function getTMPDevices(objs) {
   }
 }
 
+function createRemList() {
+
+  var memoList = document.getElementById("rem-dev-list");
+  var memoItem = document.createElement("li");
+  memoItem.setAttribute("data-name", alias);
+  memoItem.id = "remove" + path;
+
+  var checkLabel = document.createElement("label");
+  checkLabel.className = "pack-radio danger";
+
+  var input = document.createElement("input");
+  input.type = "radio";
+
+  var span = document.createElement("span");
+  
+  checkLabel.appendChild(input);
+  checkLabel.appendChild(span);
+  
+  memoItem.addEventListener("click", function (e) {
+    console.log("Remove device: " + this.getAttribute("data-name"));
+
+    callRemoveDevice(this.id);
+  });
+
+  var memoA = document.createElement("a");
+  var memoP = document.createElement("p");
+  var memoTitle = document.createTextNode(properties["Alias"]);
+
+  memoP.appendChild(memoTitle);
+  memoA.appendChild(memoP);
+  memoItem.appendChild(checkLabel);
+  memoItem.appendChild(memoA);
+  memoList.appendChild(memoItem);
+}
+
 function createDiscList() {
   // Create device discovery list
   clearAllList("dev-disc-list");
