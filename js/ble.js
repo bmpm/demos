@@ -351,39 +351,56 @@ function getTMPDevices(objs) {
   }
 }
 
+function callRemoveDevice(pathRem) {
+  console.log("Remove device: ", pathRem);
+}
+
 function createRemList() {
+  bus.getObject("org.bluez", "/",
+    function (proxy) { proxy.GetManagedObjects().then(getRemDevices, errorCB); },
+    function (error) { console.log("Remove device list: " + error); });
+}
 
+function getRemDevices(objs) {
   var memoList = document.getElementById("rem-dev-list");
-  var memoItem = document.createElement("li");
-  memoItem.setAttribute("data-name", alias);
-  memoItem.id = "remove" + path;
 
-  var checkLabel = document.createElement("label");
-  checkLabel.className = "pack-radio danger";
+  for (o in objs) {
 
-  var input = document.createElement("input");
-  input.type = "radio";
+    if (objs[o]["org.bluez.Device1"] == null)
+      continue;
 
-  var span = document.createElement("span");
-  
-  checkLabel.appendChild(input);
-  checkLabel.appendChild(span);
-  
-  memoItem.addEventListener("click", function (e) {
-    console.log("Remove device: " + this.getAttribute("data-name"));
+    var memoItem = document.createElement("li");
+    memoItem.setAttribute("data-name", objs[o]["org.bluez.Device1"]["Alias"]);
 
-    callRemoveDevice(this.id);
-  });
+    memoItem.id = "remove" + o;
 
-  var memoA = document.createElement("a");
-  var memoP = document.createElement("p");
-  var memoTitle = document.createTextNode(properties["Alias"]);
+    var checkLabel = document.createElement("label");
+    checkLabel.className = "pack-radio danger";
 
-  memoP.appendChild(memoTitle);
-  memoA.appendChild(memoP);
-  memoItem.appendChild(checkLabel);
-  memoItem.appendChild(memoA);
-  memoList.appendChild(memoItem);
+    var input = document.createElement("input");
+    input.type = "radio";
+
+    var span = document.createElement("span");
+
+    checkLabel.appendChild(input);
+    checkLabel.appendChild(span);
+
+    /*memoItem.addEventListener("click", function (e) {
+      console.log("Remove device: " + this.getAttribute("data-name"));
+
+      callRemoveDevice(this.id);
+    });*/
+
+    var memoA = document.createElement("a");
+    var memoP = document.createElement("p");
+    var memoTitle = document.createTextNode(objs[o]["org.bluez.Device1"]["Alias"]);
+
+    memoP.appendChild(memoTitle);
+    memoA.appendChild(memoP);
+    memoItem.appendChild(checkLabel);
+    memoItem.appendChild(memoA);
+    memoList.appendChild(memoItem);
+  }
 }
 
 function createDiscList() {
