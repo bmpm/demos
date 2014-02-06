@@ -8,7 +8,7 @@ document.querySelector('#btn-disc-back').addEventListener ('click', function () 
   document.querySelector('[data-position="current"]').className = 'current';
   if (document.querySelector('#btn-stop-disc').innerHTML != "START")
     deviceScanOff();
-  rebuildDevList(); 
+  rebuildDevList();
 });
 
 document.querySelector('#btn-stop-disc').addEventListener ('click', function () {
@@ -24,6 +24,7 @@ document.querySelector('#btn-stop-disc').addEventListener ('click', function () 
 document.querySelector('#btn-rem-back').addEventListener ('click', function () {
   document.querySelector('#remove-device').className = 'right';
   document.querySelector('[data-position="current"]').className = 'current';
+  rebuildDevList();
 });
 
 document.querySelector('#dev-search').addEventListener ('click', function () {

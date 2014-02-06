@@ -1,6 +1,7 @@
 var iasAlertLevelChr = null;
 var llsAlertLevelChr = null;
 var adapterPath = null;
+var remDevicePath = null;
 
 var bus = null;
 
@@ -20,11 +21,10 @@ function propertiesChanged(iface, changed, invalidated) {
   if (iface != "org.bluez.Device1")
     return;
 
-  cloudeebus.log("signal 'PropertiesChanged': " + iface);
+  console.log("PropertiesChanged: " + iface + ", Name: " + this.Alias);
 
   if (changed["Connected"] == null)
     return;
-  cloudeebus.log("Connected == " + changed["Connected"] + "name: " + this.Alias);
 
   if (changed["Connected"] == 0) {
      customConfirm("WARNING", "Device " + this.Alias + " disconnected", "danger");
@@ -48,7 +48,7 @@ function interfacesAdded(path, interfaces) {
     return;
 
   console.log("[ " + properties["Address"] + " ]");
-  addItemList(properties, "dev-disc-list", path)
+  addItemList(properties, "dev-disc-list-ul", path)
 }
 
 function interfacesRemoved(path, interfaces) {
@@ -56,9 +56,10 @@ function interfacesRemoved(path, interfaces) {
   
   if (document.querySelector('#dev-discovery').className == 'current') {
       delItemList("discovery" + path);
-  } else {
+  } else if (document.querySelector('#remove-device').className == 'current') {
+      delItemList("remove" + path);
+  } else
       delItemList(path);
-  }
 }
 
 function setEnabledItem(id, value) {
@@ -99,7 +100,6 @@ function errorPCCB(error) {
 }
 
 function connectInterface(proxy) {
-  console.log("connect Interface ADD/REM");
   proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesAdded", interfacesAdded, errorICB);
   proxy.connectToSignal("org.freedesktop.DBus.ObjectManager", "InterfacesRemoved", interfacesRemoved, errorICB);
 }
@@ -235,7 +235,7 @@ function llsAlert(value) {
 }
 
 function connectSignal(proxy) {
-      proxy.connectToSignal("org.freedesktop.DBus.Properties", "PropertiesChanged", propertiesChanged, errorPCCB);
+  proxy.connectToSignal("org.freedesktop.DBus.Properties", "PropertiesChanged", propertiesChanged, errorPCCB);
 }
 
 function stopScan(proxy) {
@@ -313,8 +313,8 @@ function callPairDevice(path, alias, paired) {
   }
 }
 
-function addItemList(properties, list, path) {
-  var memoList = document.getElementById(list);
+function addItemList(properties, ulItem, path) {
+  var memoList = document.getElementById(ulItem);
   var memoItem = document.createElement("li");
 
   memoItem.setAttribute("data-name", properties["Alias"]);
@@ -341,28 +341,50 @@ function getTMPDevices(objs) {
     if (objs[o]["org.bluez.Device1"] == null)
       continue;
 
-    console.log(o + objs[o]["org.bluez.Device1"]);
     // Get temporary devices and not connect devices (already paired)
     if (objs[o]["org.bluez.Device1"]["Connected"] == 1)
       continue;
 
-    console.log("Device discovery:" + objs[o]["org.bluez.Device1"]["Alias"]);
-    addItemList(objs[o]["org.bluez.Device1"], "dev-disc-list", o);
+    console.log("Device discovery: " + objs[o]["org.bluez.Device1"]["Alias"] +
+                ", path: " + o);
+    addItemList(objs[o]["org.bluez.Device1"], "dev-disc-list-ul", o);
   }
 }
 
-function callRemoveDevice(pathRem) {
-  console.log("Remove device: ", pathRem);
+function callRemoveDevice() {
+  if (remDevicePath == null) {
+    customConfirm("WARNING", "Choose a device to be removed", "danger");
+    return;
+  }
+
+  // Delete the string "remove" from beginning
+  var devPath = remDevicePath.substr(6);
+  remDevicePath = null;
+  console.log("Try removing device: " + devPath);
+
+  var obj = bus.getObject("org.bluez", adapterPath, null, errorCB);
+
+  obj.callMethod("org.bluez.Adapter1", "RemoveDevice", [devPath]).then(
+       function () { console.log("Device has been removed: " + devPath); },
+       function (error) { console.log("Remove device method: " + error); });
+
 }
 
 function createRemList() {
+  clearAllList("rem-dev-list");
+  addHeaderList("Choose a device", null, "rem-dev-list", "rem-dev-list-ul");
+  remDevicePath = null;
+  
+  var ulItem = document.getElementById("rem-dev-list-ul");
+  ulItem.setAttribute("data-type", "edit");
+
   bus.getObject("org.bluez", "/",
     function (proxy) { proxy.GetManagedObjects().then(getRemDevices, errorCB); },
     function (error) { console.log("Remove device list: " + error); });
 }
 
 function getRemDevices(objs) {
-  var memoList = document.getElementById("rem-dev-list");
+  var memoList = document.getElementById("rem-dev-list-ul");
 
   for (o in objs) {
 
@@ -378,18 +400,20 @@ function getRemDevices(objs) {
     checkLabel.className = "pack-radio danger";
 
     var input = document.createElement("input");
+    input.addEventListener("click", function (e) { e.stopPropagation(); });
     input.type = "radio";
+    input.name = "choose-dev";
 
     var span = document.createElement("span");
 
     checkLabel.appendChild(input);
     checkLabel.appendChild(span);
 
-    /*memoItem.addEventListener("click", function (e) {
-      console.log("Remove device: " + this.getAttribute("data-name"));
+    memoItem.addEventListener("click", function (e) {
+      console.log("Device to remove: " + this.getAttribute("data-name"));
 
-      callRemoveDevice(this.id);
-    });*/
+      remDevicePath = this.id;
+    });
 
     var memoA = document.createElement("a");
     var memoP = document.createElement("p");
@@ -434,7 +458,7 @@ function getDevices(objs) {
        if (objs[o]["org.bluez.Device1"]["Paired"] == 0)
          continue;
 
-       cloudeebus.log("Device paired:" + objs[o]["org.bluez.Device1"]["Alias"]);
+       console.log("Device paired: " + objs[o]["org.bluez.Device1"]["Alias"]);
        bus.getObject("org.bluez", o, connectSignal, errorCB);
 
         var memoItem = document.createElement("li");
